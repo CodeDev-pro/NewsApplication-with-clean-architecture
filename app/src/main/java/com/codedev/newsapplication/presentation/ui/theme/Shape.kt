@@ -1,4 +1,4 @@
-package com.codedev.newsapplication.ui.theme
+package com.codedev.newsapplication.presentation.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Shapes

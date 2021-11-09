@@ -70,6 +70,8 @@ dependencies {
 
     def paging_version = "3.0.1"
     implementation "androidx.paging:paging-runtime-ktx:$paging_version"
+    // optional - Jetpack Compose integration
+    implementation "androidx.paging:paging-compose:1.0.0-alpha14"
 
     implementation "androidx.datastore:datastore-preferences:1.0.0"
 
@@ -112,6 +114,9 @@ dependencies {
 
     //Coil Image
     implementation 'com.google.accompanist:accompanist-coil:0.12.0'
+    implementation "io.coil-kt:coil:1.4.0"
+    implementation "io.coil-kt:coil-compose:1.4.0"
+    implementation "com.github.skydoves:landscapist-coil:1.4.1"
 
     //Ktor
     def ktor_version = '1.5.4'
@@ -119,4 +124,7 @@ dependencies {
     implementation "io.ktor:ktor-client-json:$ktor_version"
     implementation "io.ktor:ktor-client-serialization-jvm:$ktor_version"
     implementation "io.ktor:ktor-client-logging-jvm:$ktor_version"
+
+    //Constraint layout for jetpack compose
+    implementation "androidx.constraintlayout:constraintlayout-compose:1.0.0-rc01"
 }
