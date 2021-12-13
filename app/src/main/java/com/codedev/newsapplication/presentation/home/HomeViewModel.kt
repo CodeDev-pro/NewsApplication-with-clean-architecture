@@ -1,6 +1,7 @@
 package com.codedev.newsapplication.presentation.home
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -17,6 +18,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val TAG = "HomeViewModel"
+
 @ExperimentalCoroutinesApi
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -31,7 +34,8 @@ class HomeViewModel @Inject constructor(
     ).connection
 
     companion object {
-        const val DEFAULT_QUERY = "climate change"
+        val DEFAULT_QUERY = "climate change"
+        get() = field.trim()
     }
 
     private val _events = MutableSharedFlow<HomeEvents>(0)
@@ -40,38 +44,62 @@ class HomeViewModel @Inject constructor(
     val actionFlow = MutableSharedFlow<HomeEvents>()
     val execute: (HomeEvents) -> Unit
     val pagingFlow : Flow<PagingData<UiModel>>
+
+    val trendingPagingFlow : Flow<PagingData<UiModel>>
+
     val _state = MutableStateFlow(HomeState())
-    val state: StateFlow<HomeState>
+    val state: StateFlow<HomeState> = _state.asStateFlow()
 
 
     init {
         pagingFlow = actionFlow
             .filterIsInstance<HomeEvents.Search>()
             .distinctUntilChanged()
-            .onStart { emit(HomeEvents.Search("")) }
+            .onStart { emit(HomeEvents.Search(DEFAULT_QUERY)) }
             .flatMapLatest { event ->
                 _state.value = _state.value.copy(
                     query = event.query
                 )
                 searchVideo(event.query)
             }
-        state = pagingFlow
+
+        trendingPagingFlow = actionFlow
+            .filterIsInstance<HomeEvents.GetTrendingArticles>()
             .distinctUntilChanged()
-            .map { pagingData ->
-                _state.value.copy(
-                    pagingData = pagingData
-                )
-            }.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                HomeState()
-            )
+            .onStart { emit(HomeEvents.GetTrendingArticles) }
+            .flatMapLatest { event ->
+                getTrendingHeadlines()
+            }
         execute = {
-            viewModelScope.launch { actionFlow.emit(it) }
+            viewModelScope.launch {
+                when(it) {
+                    is HomeEvents.Search -> {
+                        actionFlow.emit(it)
+                        pagingFlow.distinctUntilChanged()
+                            .map { state ->
+                                _state.value.copy(
+                                    pagingData = state
+                                )
+                            }
+                    }
+                    is HomeEvents.GetTrendingArticles -> {
+                        actionFlow.emit(it)
+                        trendingPagingFlow.distinctUntilChanged()
+                            .map { state ->
+                                _state.value.copy(
+                                    pagingData = state
+                                )
+                            }
+                    }
+                }
+            }
         }
     }
 
-    private suspend fun searchVideo(query: String) = useCases.searchArticle(query, 1)
+    private suspend fun searchVideo(query: String) = useCases.searchArticle(query)
+        .cachedIn(viewModelScope)
+
+    private suspend fun getTrendingHeadlines() = useCases.getTrendingHeadlines()
         .cachedIn(viewModelScope)
 
 }

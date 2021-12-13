@@ -1,4 +1,4 @@
-package com.codedev.newsapplication.data.models
+package com.codedev.newsapplication.data.models.article_models
 
 import kotlinx.serialization.Serializable
 

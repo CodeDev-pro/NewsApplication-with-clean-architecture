@@ -5,10 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.runtime.Composable
@@ -23,13 +20,28 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
+import coil.annotation.ExperimentalCoilApi
+import coil.compose.ImagePainter
+import coil.compose.rememberImagePainter
 import com.codedev.newsapplication.R
+import com.codedev.newsapplication.domain.entities.EntityArticle
+import com.codedev.newsapplication.presentation.ui.components.CustomChip
 import com.codedev.newsapplication.presentation.ui.theme.DarkGrayTone
 import com.codedev.newsapplication.presentation.ui.theme.TextWhite
+import com.codedev.newsapplication.presentation.utils.isoToDateConverter
 
-@Preview(showBackground = true)
+@ExperimentalCoilApi
 @Composable
-fun ArticleItem() {
+fun ArticleItem(
+    textColor: Color = TextWhite,
+    article: EntityArticle
+) {
+    val painter = rememberImagePainter(data = article.urlToImage, builder = {
+        crossfade(true)
+        error(R.drawable.ic_weather)
+    })
+    val state = painter.state
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -45,75 +57,79 @@ fun ArticleItem() {
                         .height(200.dp)
                         .clip(RoundedCornerShape(10.dp))
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.bitcoin),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(10.dp))
-                    )
+                    if (painter.state is ImagePainter.State.Success) {
+                        Image(
+                            painter = painter,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                    } else if (painter.state is ImagePainter.State.Loading) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        }
+                    } else if (painter.state is ImagePainter.State.Error) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "An unknown error occurred",
+                                style = MaterialTheme.typography.body1.copy(color = textColor)
+                            )
+                            Spacer(modifier = Modifier.height(5.dp))
+                            CustomChip(
+                                text = "Retry",
+                                onSelect = {}
+                            )
+                        }
+                    }
                 }
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(top = 10.dp)
                 ) {
-                    Text(text = "world news 12h")
+                    Text(
+                        text = "${article.source} • ${article.publishedAt.isoToDateConverter()}",
+                        style = MaterialTheme.typography.caption.copy(color = textColor)
+                    )
                     Spacer(modifier = Modifier.height(7.dp))
                     Text(
-                        text = "Australia to deport kiwi criminal who has lived there since he was 9",
-                        style = MaterialTheme.typography.body1.copy(fontSize = 20.sp),
-                        maxLines = 4,
+                        text = article.title,
+                        style = MaterialTheme.typography.body1.copy(
+                            fontSize = 20.sp,
+                            color = textColor
+                        ),
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                     Row(
                         modifier = Modifier
+                            .weight(1f)
                             .padding(10.dp)
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .padding(5.dp)
-                                .clip(RoundedCornerShape(25.dp))
-                                .background(Color.White.copy(alpha = 0.1f))
-                                .clickable { }
-                                .padding(3.dp)
-                        ) {
-                            Text(
-                                text = "CNN",
-                                style = MaterialTheme.typography.body1.copy(
-                                    color = TextWhite,
-                                    fontSize = 12.sp
-                                ),
-                                modifier = Modifier.padding(5.dp)
-                            )
-                        }
+                        TextItem(
+                            color = textColor
+                        )
                         Spacer(modifier = Modifier.width(10.dp))
-                        Box(
-                            modifier = Modifier
-                                .padding(5.dp)
-                                .clip(RoundedCornerShape(25.dp))
-                                .background(Color.White.copy(alpha = 0.1f))
-                                .clickable { }
-                                .padding(3.dp)
-                        ) {
-                            Text(
-                                text = "Date",
-                                style = MaterialTheme.typography.body1.copy(
-                                    color = TextWhite,
-                                    fontSize = 12.sp
-                                ),
-                                modifier = Modifier.padding(5.dp)
-                            )
-                        }
+                        TextItem(
+                            color = textColor
+                        )
                     }
                 }
                 IconButton(onClick = { }) {
                     Icon(
                         imageVector = Icons.Outlined.MoreHoriz,
                         contentDescription = null,
-                        tint = TextWhite
+                        tint = textColor
                     )
                 }
             }
@@ -129,10 +145,35 @@ fun ArticleItem() {
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(text = "Save", style = MaterialTheme.typography.body1)
             }
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .background(TextWhite)
-                .height(0.5.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(textColor)
+                    .height(0.5.dp)
+            )
         }
+    }
+}
+
+@Composable
+fun TextItem(
+    color: Color = Color.White,
+) {
+    Box(
+        modifier = Modifier
+            .padding(5.dp)
+            .clip(RoundedCornerShape(25.dp))
+            .background(color.copy(alpha = 0.1f))
+            .clickable { }
+            .padding(3.dp)
+    ) {
+        Text(
+            text = "Date",
+            style = MaterialTheme.typography.body1.copy(
+                color = color,
+                fontSize = 12.sp
+            ),
+            modifier = Modifier.padding(5.dp)
+        )
     }
 }

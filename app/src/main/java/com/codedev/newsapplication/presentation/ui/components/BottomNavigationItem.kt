@@ -1,5 +1,7 @@
 package com.codedev.newsapplication.presentation.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector4D
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +21,7 @@ import com.codedev.newsapplication.presentation.ui.navigation.CustomBottomNaviga
 import com.codedev.newsapplication.presentation.ui.theme.LightBlue300
 import com.codedev.newsapplication.presentation.ui.theme.LightGrayTint
 import com.codedev.newsapplication.presentation.ui.theme.TextWhite
+import kotlinx.coroutines.CoroutineScope
 
 @Composable
 fun CustomBottomNavigationItem(
@@ -26,7 +29,7 @@ fun CustomBottomNavigationItem(
     item: CustomBottomNavigationScreens,
     selected: Boolean = false,
     alwaysShowLabel: Boolean = false,
-    onClick: (CustomBottomNavigationScreens) -> Unit = {}
+    onClick: (CustomBottomNavigationScreens) -> Unit = {},
 ) {
     Box(
         modifier = modifier

@@ -1,9 +1,13 @@
 package com.codedev.newsapplication.data.api
 
-import com.codedev.newsapplication.data.models.NewsResponse
+import android.util.Log
+import com.codedev.newsapplication.data.getEverything
+import com.codedev.newsapplication.data.getTopHeadlines
+import com.codedev.newsapplication.data.models.article_models.NewsResponse
 import io.ktor.client.*
 import io.ktor.client.features.*
 import io.ktor.client.request.*
+import io.ktor.http.*
 
 private const val TAG = "NewsClient"
 
@@ -11,13 +15,41 @@ class NewsApi(
     private val client: HttpClient
 ) {
 
-    suspend fun searchArticle(): Either<Failure, NewsResponse> {
+    suspend fun searchArticle(
+        query: String,
+        pageSize: Int,
+        page: Int
+    ): Either<Failure, NewsResponse> {
         return try {
-            val response = client.get<NewsResponse>(""){
-
+            val url = getEverything(
+                query = query,
+                pageSize = pageSize,
+                page = page
+            )
+            val response = client.request<NewsResponse>(url){
+                method = HttpMethod.Get
             }
+            Log.d(TAG, "searchArticle: ${response.toString()}")
             Either.Right(response)
         }catch (e: Exception) {
+            Either.Left(e.catchExceptions())
+        }
+    }
+
+    suspend fun getTrendingHeadlines(
+        pageSize: Int,
+        page: Int
+    ): Either<Failure, NewsResponse> {
+        return try {
+            val url = getTopHeadlines(
+                pageSize = pageSize,
+                page = page
+            )
+            val response = client.request<NewsResponse>(url) {
+                method = HttpMethod.Get
+            }
+            Either.Right(response)
+        } catch (e: Exception) {
             Either.Left(e.catchExceptions())
         }
     }

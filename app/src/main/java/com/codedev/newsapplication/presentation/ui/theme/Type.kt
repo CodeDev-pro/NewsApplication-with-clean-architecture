@@ -53,4 +53,10 @@ val Typography = Typography(
         fontSize = 28.sp,
         color = TextWhite
     ),
+    caption = TextStyle(
+        fontFamily = QuickSand,
+        fontWeight = LightOblique,
+        fontSize = 12.sp,
+        color = TextWhite
+    ),
 )

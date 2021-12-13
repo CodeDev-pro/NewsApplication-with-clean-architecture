@@ -2,7 +2,7 @@ package com.codedev.newsapplication.data.api
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.codedev.newsapplication.data.models.ArticleDTO
+import com.codedev.newsapplication.data.models.article_models.ArticleDTO
 import javax.inject.Inject
 
 const val DEFAULT_INIT_PAGE = 1
@@ -20,7 +20,11 @@ class NewsPagingSource @Inject constructor(
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, ArticleDTO> {
         val page = params.key ?: DEFAULT_INIT_PAGE
-        val data = api.searchArticle()
+        val data = api.searchArticle(
+            query = query,
+            pageSize = params.loadSize,
+            page = page
+        )
         return when(data) {
             is Either.Right -> {
                 val articles = data.response.articles

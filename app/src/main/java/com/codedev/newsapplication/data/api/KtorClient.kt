@@ -15,9 +15,11 @@ private const val TAG = "KtorClient"
 
 object KtorClient {
     val json = Json {
-        encodeDefaults = true
-        ignoreUnknownKeys = true
-        isLenient = true
+        encodeDefaults = false
+        ignoreUnknownKeys = false
+        isLenient = false
+        prettyPrint = true
+        coerceInputValues = true
     }
 
     val httpClient = HttpClient {
@@ -44,7 +46,6 @@ object KtorClient {
         }
         defaultRequest {
             contentType(ContentType.Application.Json)
-            accept(ContentType.Application.Json)
         }
     }
 }

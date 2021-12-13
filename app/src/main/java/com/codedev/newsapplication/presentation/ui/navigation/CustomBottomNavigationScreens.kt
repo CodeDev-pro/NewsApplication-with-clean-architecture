@@ -19,15 +19,15 @@ sealed class CustomBottomNavigationScreens(
     )
 
     object Favourite : CustomBottomNavigationScreens(
-        "favourite", "Favourite", R.drawable.ic_bookmark, ColorYellow
+        "favourite", "Favourite", R.drawable.ic_bookmark, MidBlue
     )
 
     object Search : CustomBottomNavigationScreens(
-        "search", "Search", R.drawable.ic_search, ColorOrange
+        "search", "Search", R.drawable.ic_search, LightBlue300
     )
 
     object Weather : CustomBottomNavigationScreens(
-        "weather", "Weather", R.drawable.ic_weather, ColorBlue
+        "weather", "Weather", R.drawable.ic_weather, ColorPurple
     )
 
     object Settings : CustomBottomNavigationScreens(
