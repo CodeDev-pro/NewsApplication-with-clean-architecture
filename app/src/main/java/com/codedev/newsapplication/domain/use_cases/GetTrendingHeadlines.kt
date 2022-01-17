@@ -12,7 +12,7 @@ class GetTrendingHeadlines @Inject constructor(
     private val repository: NewsRepository
 ) {
 
-    operator suspend fun invoke() : Flow<PagingData<UiModel>> {
+    suspend operator fun invoke() : Flow<PagingData<UiModel>> {
         return repository.trendingArticles().map { pagingData ->
             pagingData.map {
                 UiModel.TrendingEntityArticle(it)

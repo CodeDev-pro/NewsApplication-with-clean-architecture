@@ -1,24 +1,30 @@
 package com.codedev.newsapplication.presentation.utils
 
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
-fun String.isoToDateConverter(): Date? {
-    val dtStart = "2020-07-05T09:27:37Z"
-    val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-    return format.parse(dtStart)
+fun String.isoToDateConverter(): String {
+    val format = DateTimeFormatter.ISO_INSTANT
+    val accessor = format.parse(this)
+    val instant = Instant.from(accessor)
+    val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+    return localDate.toDateFormat()
 }
 
-fun Date.toString(format: String, locale: Locale = Locale.getDefault()): String {
-    val formatter = SimpleDateFormat(format, locale)
-    return formatter.format(this)
+fun LocalDate.toDateFormat(): String {
+    val formattedDate = format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))
+    val splits = formattedDate.split(" ").toMutableList()
+    val date = StringBuilder()
+    date.append("${splits[0]} ${splits[1]}, ${splits[2]}")
+    return date.toString()
 }
 
-fun getCurrentDateTime(): Date {
-    return Calendar.getInstance().time
+
+fun getCurrentDate(): LocalDate {
+    return LocalDate.now()
 }
 
-fun getCurrentTime(): String {
-    val date = getCurrentDateTime()
-    return date.toString("yyyy/MM/dd HH:mm:ss")
-}
+

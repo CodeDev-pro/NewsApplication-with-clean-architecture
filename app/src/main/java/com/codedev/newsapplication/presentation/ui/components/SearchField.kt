@@ -24,9 +24,13 @@ import com.codedev.newsapplication.presentation.ui.theme.TextWhite
 
 private const val TAG = "SearchField"
 
-@Preview(showBackground = true)
 @Composable
-fun SearchField() {
+fun SearchField(
+    value: String = "",
+    setValue: (String) -> Unit = {},
+    editable: Boolean = true,
+    onSearch: (String) -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -50,21 +54,28 @@ fun SearchField() {
                 modifier = Modifier.weight(1f),
             ) {
                 BasicTextField(
-                    value = "",
+                    value = value,
                     modifier = Modifier.fillMaxWidth(),
-                    onValueChange = {},
+                    onValueChange = {
+                        setValue(it)
+                    },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.body1,
-                    keyboardActions = KeyboardActions(onSearch = {}),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        onSearch(value)
+                    }),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Search
+                    ),
+                    readOnly = !editable
+                )
+                if(value == "") {
+                    Text(
+                        text = "Search...",
+                        style = MaterialTheme.typography.body1.copy(color = TextWhite.copy(0.5f)),
                     )
-                )
-                Text(
-                    text = "Search...",
-                    style = MaterialTheme.typography.body1.copy(color = TextWhite.copy(0.5f)),
-                )
+                }
             }
         }
     }

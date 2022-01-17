@@ -1,14 +1,12 @@
 package com.codedev.newsapplication.presentation.home.components
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -25,51 +23,85 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import coil.ImageLoader
+import coil.annotation.ExperimentalCoilApi
+import coil.compose.ImagePainter
+import coil.compose.rememberImagePainter
 import com.codedev.newsapplication.R
+import com.codedev.newsapplication.domain.entities.EntityArticle
+import com.codedev.newsapplication.presentation.ui.components.CustomChip
 import com.codedev.newsapplication.presentation.ui.theme.BoldOblique
 import com.codedev.newsapplication.presentation.ui.theme.BookOblique
 import com.codedev.newsapplication.presentation.ui.theme.DarkGrayTone
 import com.codedev.newsapplication.presentation.ui.theme.TextWhite
+import com.codedev.newsapplication.presentation.utils.CacheActions
 import com.skydoves.landscapist.coil.LocalCoilImageLoader
 
 private const val TAG = "TrendingNewItem"
 
-@Preview(showBackground = true)
+@ExperimentalCoilApi
 @Composable
-fun TrendingArticleItem() {
-    val imageLoader = ImageLoader.Builder(LocalContext.current)
-        .build()
+fun TrendingArticleItem(
+    textColor: Color = TextWhite,
+    article: EntityArticle,
+    onClick: (EntityArticle) -> Unit = {},
+    onCacheAction: (CacheActions) -> Unit = {}
+) {
+    val painter = rememberImagePainter(data = article.urlToImage, builder = {
+        crossfade(true)
+        error(R.drawable.ic_weather)
+    })
     Box(
         modifier = Modifier
             .padding(5.dp)
             .width(200.dp)
             .height(350.dp)
             .clip(RoundedCornerShape(15.dp))
+            .clickable {
+                onClick(article)
+            }
     ) {
-        //Log.d(TAG, "NewsItem: ${painter.loadState}")
-        CompositionLocalProvider(LocalCoilImageLoader provides imageLoader) {
-            Image(
-                painter = painterResource(id = R.drawable.bitcoin),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(15.dp)),
-                contentScale = ContentScale.Crop,
-                /*loading = {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .align(Alignment.Center)
-                    ) {
-                        CircularProgressIndicator(
-                            progress = it.progress
-                        )
-                    }
-                },
-                failure = {
-
-                }*/
-            )
+        Image(
+            painter = painter,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(10.dp))
+        )
+        when (painter.state) {
+            is ImagePainter.State.Success -> {
+                Log.d(TAG, "ArticleItem: ${painter.state}")
+            }
+            is ImagePainter.State.Loading -> {
+                Log.d(TAG, "ArticleItem: ${painter.state}")
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = TextWhite)
+                }
+            }
+            is ImagePainter.State.Error -> {
+                Log.d(TAG, "ArticleItem: ${painter.state}")
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "An unknown error occurred",
+                        style = MaterialTheme.typography.body1.copy(color = textColor)
+                    )
+                    Spacer(modifier = Modifier.height(5.dp))
+                    CustomChip(
+                        text = "Retry",
+                        onSelect = {}
+                    )
+                }
+            }
+            else -> {
+                Log.d(TAG, "ArticleItem: ${painter.state}")
+                Box(modifier = Modifier.fillMaxSize())
+            }
         }
         Box(
             modifier = Modifier
@@ -86,47 +118,45 @@ fun TrendingArticleItem() {
         )
 
         Text(
-            text = "Hello this is some dummy text to try out the News application make sure you enjoy",
-            style = MaterialTheme.typography.body1.copy(color = TextWhite, fontSize = 19.sp, fontWeight = BoldOblique),
+            text = article.title,
+            style = MaterialTheme.typography.body1.copy(color = TextWhite, fontSize = 22.sp, fontWeight = BoldOblique),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(10.dp),
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
         )
-        ConstraintLayout(
-            modifier = Modifier.align(Alignment.TopStart)
-                .padding(10.dp)
+        Row(
+            modifier = Modifier
                 .fillMaxWidth()
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            val (saveIcon, sourceText) = createRefs()
             Box(
                 modifier = Modifier
+                    .fillMaxWidth(0.6f)
                     .padding(5.dp)
-                    .constrainAs(sourceText) {
-                        top.linkTo(saveIcon.top)
-                        start.linkTo(parent.start)
-                        bottom.linkTo(saveIcon.bottom)
-                    }
                     .clip(RoundedCornerShape(5.dp))
                     .background(DarkGrayTone.copy(alpha = 0.5f))
-                    .clickable {  }
+                    .clickable { }
                     .padding(5.dp)
             ) {
                 Text(
-                    text = "CNN",
+                    text = article.source,
                     style = MaterialTheme.typography.body1.copy(color = TextWhite),
-                    modifier = Modifier.padding(5.dp)
+                    modifier = Modifier.padding(5.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             IconButton(
-                onClick = { /*TODO*/ },
+                onClick = {
+                          if(article.isSaved) onCacheAction(CacheActions.Delete(article))
+                          else onCacheAction(CacheActions.Save(article))
+                },
                 modifier = Modifier
                     .padding(5.dp)
-                    .constrainAs(saveIcon) {
-                        top.linkTo(parent.top)
-                        end.linkTo(parent.end)
-                    }
                     .clip(RoundedCornerShape(10.dp))
                     .background(color = DarkGrayTone.copy(alpha = 0.6f))
             ) {

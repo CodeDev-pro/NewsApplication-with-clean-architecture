@@ -21,7 +21,9 @@ fun SearchScreen(color: Color) {
     ) {
         LazyColumn {
             item {
-                SearchField()
+                SearchField(
+                    setValue = {}
+                )
                 Box(modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)

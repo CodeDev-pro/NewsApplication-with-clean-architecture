@@ -1,62 +1,163 @@
 package com.codedev.newsapplication.presentation.home
 
+import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.NavController
 import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import coil.annotation.ExperimentalCoilApi
 import com.codedev.newsapplication.R
+import com.codedev.newsapplication.domain.entities.EntityArticle
 import com.codedev.newsapplication.domain.utils.UiModel
 import com.codedev.newsapplication.presentation.home.components.ArticleItem
+import com.codedev.newsapplication.presentation.home.components.CustomDatePicker
 import com.codedev.newsapplication.presentation.home.components.TrendingArticleItem
-import com.codedev.newsapplication.presentation.ui.components.CustomChip
-import com.codedev.newsapplication.presentation.ui.components.ErrorItem
-import com.codedev.newsapplication.presentation.ui.components.LoadingView
+import com.codedev.newsapplication.presentation.ui.components.*
 import com.codedev.newsapplication.presentation.ui.theme.DarkGrayTint
 import com.codedev.newsapplication.presentation.ui.theme.DarkGrayTone
 import com.codedev.newsapplication.presentation.ui.theme.TextWhite
-import com.codedev.newsapplication.presentation.utils.getCurrentTime
+import com.codedev.newsapplication.presentation.utils.CacheActions
+import com.codedev.newsapplication.presentation.utils.getCurrentDate
+import com.codedev.newsapplication.presentation.utils.toDateFormat
+import com.vanpra.composematerialdialogs.MaterialDialogState
+import com.vanpra.composematerialdialogs.rememberMaterialDialogState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 private const val TAG = "Home"
 
+@ExperimentalMaterialApi
 @ExperimentalCoilApi
 @ExperimentalCoroutinesApi
 @Composable
 fun HomeScreen(
     color: Color,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    scope: CoroutineScope,
+    navController: NavController,
+    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
 ) {
-    val items = viewModel.pagingFlow.collectAsLazyPagingItems()
+    val popularArticles: LazyPagingItems<UiModel> = viewModel.pagingFlow.collectAsLazyPagingItems()
+    val trendingArticles: LazyPagingItems<UiModel> =
+        viewModel.trendingPagingFlow.collectAsLazyPagingItems()
+    val popularArticleState = rememberLazyListState()
+    val trendingArticleState = rememberLazyListState()
+
+    DisposableEffect(key1 = lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                scope.launch {
+                    val popularState = viewModel.state.value.popularData
+                    val trendingState = viewModel.state.value.trendingData
+                    if (popularArticles.itemCount > popularState.position) {
+                        popularArticleState.scrollToItem(popularState.position, popularState.offset)
+                    }
+                    if (trendingArticles.itemCount > trendingState.position) {
+                        trendingArticleState.scrollToItem(
+                            trendingState.position,
+                            trendingState.offset
+                        )
+                    }
+                }
+            } else if (event == Lifecycle.Event.ON_STOP) {
+                viewModel.execute(
+                    HomeEvents.TrendingArticleScroll(
+                        position = trendingArticleState.firstVisibleItemIndex,
+                        offset = trendingArticleState.firstVisibleItemScrollOffset
+                    )
+                )
+                viewModel.execute(
+                    HomeEvents.PopularArticleScroll(
+                        position = popularArticleState.firstVisibleItemIndex,
+                        offset = popularArticleState.firstVisibleItemScrollOffset
+                    )
+                )
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    var currentQuery by remember {
+        mutableStateOf(queries[1].value.lowercase())
+    }
+    var expandedItemId by remember {
+        mutableStateOf("")
+    }
+
+    val dialogState = rememberMaterialDialogState()
+    val datePicked = remember {
+        mutableStateOf(getCurrentDate())
+    }
+
+    LaunchedEffect(key1 = currentQuery) {
+        viewModel.execute(HomeEvents.Search(currentQuery))
+    }
+
+    LaunchedEffect(key1 = true) {
+        viewModel.events.collect {
+            when (it) {
+                is UiEvents.CacheMessage -> {
+
+                }
+            }
+        }
+    }
+
+    CustomDatePicker(dialogState = dialogState, datePicked = datePicked)
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkGrayTone)
+            .background(DarkGrayTone),
+        state = popularArticleState
     ) {
         item {
-            TopSection()
+            TopSection(dialogState, datePicked)
             Spacer(modifier = Modifier.height(5.dp))
-            QuerySection()
+            QuerySection(
+                currentQuery = currentQuery,
+                onQueryChanged = {
+                    currentQuery = it
+                }
+            )
             Spacer(modifier = Modifier.height(5.dp))
-            TrendingSection()
+            TrendingSection(
+                trendingItems = trendingArticles,
+                state = trendingArticleState
+            ) {
+                navController.currentBackStackEntry?.savedStateHandle?.set("article", it)
+                navController.navigate("webpage")
+            }
             Spacer(modifier = Modifier.height(5.dp))
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -76,24 +177,45 @@ fun HomeScreen(
                 )
             }
         }
-        items(items) { item ->
-            when(item) {
+        items(popularArticles) { article ->
+            when (article) {
                 is UiModel.EntityArticleItem -> {
-                    ArticleItem(article = item.entityArticle)
+                    ArticleItem(article = article.entityArticle, onMoreClick = {
+                        Log.d(TAG, "HomeScreen: more clicked, ${article.entityArticle.content}")
+                        expandedItemId = article.entityArticle.url
+                    }, onDismiss = {
+                        expandedItemId = ""
+                    }, expandedItem = expandedItemId, onClick = {
+                        navController.currentBackStackEntry?.savedStateHandle?.set("article", it)
+                        navController.navigate("webpage")
+                    }, onCacheAction = {
+                        when (it) {
+                            is CacheActions.Save -> viewModel.execute(HomeEvents.SaveArticle(it.article))
+                            is CacheActions.Delete -> viewModel.execute(HomeEvents.DeleteArticle(it.article))
+                        }
+                    })
+
                 }
-                else -> {}
+                else -> {
+                }
             }
         }
-        items.apply {
+        popularArticles.apply {
             when {
                 loadState.refresh is LoadState.Loading -> {
-                    item { LoadingView(modifier = Modifier.fillMaxSize()) }
+                    item {
+                        LoadingView(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                        )
+                    }
                 }
                 loadState.append is LoadState.Loading -> {
                     item { LoadingView() }
                 }
                 loadState.refresh is LoadState.Error -> {
-                    val errorObject = items.loadState.refresh as LoadState.Error
+                    val errorObject = popularArticles.loadState.refresh as LoadState.Error
                     item {
                         ErrorItem(
                             message = errorObject.error.localizedMessage!!,
@@ -103,7 +225,7 @@ fun HomeScreen(
                     }
                 }
                 loadState.append is LoadState.Error -> {
-                    val errorObject = items.loadState.append as LoadState.Error
+                    val errorObject = popularArticles.loadState.append as LoadState.Error
                     item {
                         ErrorItem(
                             message = errorObject.error.localizedMessage!!,
@@ -116,8 +238,10 @@ fun HomeScreen(
     }
 }
 
+@ExperimentalCoroutinesApi
 @Composable
-fun QuerySection() {
+fun QuerySection(currentQuery: String, onQueryChanged: (String) -> Unit) {
+
     LazyRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -128,11 +252,15 @@ fun QuerySection() {
         item {
             Spacer(modifier = Modifier.width(10.dp))
         }
-        items(queries.size) { item ->
+        items(queries.size) { index ->
             CustomChip(
-                text = queries[item].value,
-                onSelect = { },
-                selected = queries[item].value.startsWith("S")
+                text = queries[index].value,
+                onSelect = {
+                    if (queries[index].value != currentQuery) {
+                        onQueryChanged(queries[index].value)
+                    }
+                },
+                selected = currentQuery == queries[index].value
             )
         }
         item {
@@ -141,9 +269,8 @@ fun QuerySection() {
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun TopSection() {
+fun TopSection(dialogState: MaterialDialogState, datePicked: MutableState<LocalDate>) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top,
@@ -154,7 +281,11 @@ fun TopSection() {
         Column(
             horizontalAlignment = Alignment.Start,
         ) {
-            Text(text = getCurrentTime(), style = MaterialTheme.typography.h6, maxLines = 2)
+            Text(
+                text = datePicked.value.toDateFormat(),
+                style = MaterialTheme.typography.h6,
+                maxLines = 2
+            )
             Spacer(modifier = Modifier.height(5.dp))
             Text(
                 text = "Daily Feed",
@@ -165,12 +296,13 @@ fun TopSection() {
             )
         }
         IconButton(
-            onClick = { },
+            onClick = {
+                dialogState.show()
+            },
             modifier = Modifier
                 .padding(5.dp)
                 .clip(RoundedCornerShape(5.dp))
                 .background(DarkGrayTint.copy(0.1f))
-                .clickable { }
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_date),
@@ -181,8 +313,16 @@ fun TopSection() {
     }
 }
 
+@ExperimentalCoilApi
 @Composable
-fun TrendingSection() {
+fun TrendingSection(
+    trendingItems: LazyPagingItems<UiModel>,
+    state: LazyListState,
+    onItemClick: (EntityArticle) -> Unit
+) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+
     Column(
         horizontalAlignment = Alignment.Start
     ) {
@@ -201,19 +341,64 @@ fun TrendingSection() {
         )
         Spacer(modifier = Modifier.height(4.dp))
         LazyRow(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            state = state
         ) {
             item {
                 Spacer(modifier = Modifier.width(10.dp))
             }
-            items(30) {
-                TrendingArticleItem()
+            items(trendingItems) { article ->
+                when (article) {
+                    is UiModel.TrendingEntityArticle -> {
+                        TrendingArticleItem(article = article.entityArticle, onClick = {
+                            onItemClick(it)
+                        })
+                    }
+                    else -> {
+
+                    }
+                }
+            }
+            trendingItems.apply {
+                when {
+                    loadState.refresh is LoadState.Loading -> {
+                        item {
+                            Box(modifier = Modifier.width(screenWidth.dp)) {
+                                LoadingView(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                )
+                            }
+
+                        }
+                    }
+                    loadState.append is LoadState.Loading -> {
+                        item { LoadingView(modifier = Modifier.fillMaxHeight()) }
+                    }
+                    loadState.refresh is LoadState.Error -> {
+                        val errorObject = trendingItems.loadState.refresh as LoadState.Error
+                        item {
+                            Box(modifier = Modifier.width(screenWidth.dp)) {
+                                ErrorItem(
+                                    message = errorObject.error.localizedMessage!!,
+                                    modifier = Modifier.fillMaxSize(),
+                                    onClick = { retry() }
+                                )
+                            }
+                        }
+                    }
+                    loadState.append is LoadState.Error -> {
+                        val errorObject = trendingItems.loadState.append as LoadState.Error
+                        item {
+                            ErrorItem(
+                                message = errorObject.error.localizedMessage!!,
+                                onClick = { retry() }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
-}
-
-@Composable
-fun ChipSection() {
-
 }
